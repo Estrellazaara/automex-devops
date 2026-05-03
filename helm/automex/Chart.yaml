@@ -1,0 +1,13 @@
+apiVersion: v2
+name: automex
+description: Helm Chart para la plataforma de microservicios AutoMex
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Estrella Zarate
+    email: estrella@automex.local
+keywords:
+  - microservicios
+  - automotriz
+  - kubernetes

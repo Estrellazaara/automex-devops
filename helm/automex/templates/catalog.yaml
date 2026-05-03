@@ -1,0 +1,58 @@
+{{- if .Values.catalog.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: catalog-service
+spec:
+  replicas: {{ .Values.catalog.replicas }}
+  selector:
+    matchLabels:
+      app: catalog-service
+  template:
+    metadata:
+      labels:
+        app: catalog-service
+    spec:
+      containers:
+      - name: catalog-service
+        image: "{{ .Values.catalog.image.repository }}:{{ .Values.catalog.image.tag }}"
+        imagePullPolicy: {{ .Values.catalog.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.catalog.port }}
+        env:
+        - name: PORT
+          value: "{{ .Values.catalog.port }}"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.catalog.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.catalog.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.catalog.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: catalog-service
+spec:
+  type: ClusterIP
+  selector:
+    app: catalog-service
+  ports:
+  - port: {{ .Values.catalog.port }}
+    targetPort: {{ .Values.catalog.port }}
+    name: http
+{{- end }}

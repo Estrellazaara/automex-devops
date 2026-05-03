@@ -1,0 +1,55 @@
+{{- if .Values.appointments.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appointments-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: appointments-service
+spec:
+  replicas: {{ .Values.appointments.replicas }}
+  selector:
+    matchLabels:
+      app: appointments-service
+  template:
+    metadata:
+      labels:
+        app: appointments-service
+    spec:
+      containers:
+      - name: appointments-service
+        image: "{{ .Values.appointments.image.repository }}:{{ .Values.appointments.image.tag }}"
+        imagePullPolicy: {{ .Values.appointments.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.appointments.port }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.appointments.port }}
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.appointments.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          {{- toYaml .Values.appointments.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appointments-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: appointments-service
+spec:
+  type: ClusterIP
+  selector:
+    app: appointments-service
+  ports:
+  - port: {{ .Values.appointments.port }}
+    targetPort: {{ .Values.appointments.port }}
+    name: http
+{{- end }}
