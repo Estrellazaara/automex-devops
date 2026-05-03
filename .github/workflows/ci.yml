@@ -26,11 +26,11 @@ jobs:
       - name: Install flake8
         run: pip install flake8
 
-      - name: Lint ${{ matrix.service }}
+      - name: Lint
         run: |
           cd services/${{ matrix.service }}
           flake8 app.py --max-line-length=120 --extend-ignore=E501,W503 || true
-          echo "Lint completo para ${{ matrix.service }}"
+          echo "Lint completo"
 
   build-and-test:
     name: Build and Test Docker
@@ -53,23 +53,17 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build ${{ matrix.service }} image
+      - name: Build image
         run: |
           cd services/${{ matrix.service }}
-          docker build -t automex/${{ matrix.service }}:ci-${{ github.sha }} .
+          docker build -t automex/${{ matrix.service }}:ci .
 
-      - name: Test container responds on /health
+      - name: Test container
         run: |
-          docker run -d --name test-${{ matrix.service }} \
-            -p ${{ matrix.internal_port }}:${{ matrix.internal_port }} \
-            -e PORT=${{ matrix.internal_port }} \
-            automex/${{ matrix.service }}:ci-${{ github.sha }}
-          echo "Esperando 8 segundos a que arranque..."
+          docker run -d --name test-svc -p ${{ matrix.internal_port }}:${{ matrix.internal_port }} -e PORT=${{ matrix.internal_port }} automex/${{ matrix.service }}:ci
           sleep 8
-          echo "Probando endpoint /health..."
-          curl -f http://localhost:${{ matrix.internal_port }}/health || (docker logs test-${{ matrix.service }} && exit 1)
-          echo "${{ matrix.service }} responde correctamente"
-          docker stop test-${{ matrix.service }}
+          curl -f http://localhost:${{ matrix.internal_port }}/health
+          docker stop test-svc
 
   validate-helm:
     name: Validate Helm Chart
@@ -92,7 +86,7 @@ jobs:
         run: |
           cd helm/automex
           helm template automex . > /tmp/rendered.yaml
-          echo "Helm chart genera $(wc -l < /tmp/rendered.yaml) lineas de YAML valido"
+          echo "Helm chart valido"
 
   validate-k8s:
     name: Validate Kubernetes manifests
@@ -104,13 +98,12 @@ jobs:
       - name: Install yamllint
         run: pip install yamllint
 
-      - name: Validate YAML syntax
+      - name: Validate YAML
         run: |
           for f in k8s/*.yaml; do
             echo "Validando $f"
             yamllint -d "{extends: relaxed, rules: {line-length: disable, document-start: disable, comments: disable, truthy: disable}}" $f
           done
-          echo "Todos los manifiestos K8s tienen sintaxis YAML valida"
 
   summary:
     name: Pipeline Summary
@@ -119,9 +112,4 @@ jobs:
     if: always()
     steps:
       - name: Print summary
-        run: |
-          echo "Pipeline AutoMex DevOps completado"
-          echo "Lint Python: OK"
-          echo "Build & Test Docker: OK"
-          echo "Validate Helm: OK"
-          echo "Validate K8s: OK"
+        run: echo "Pipeline AutoMex DevOps completado"
